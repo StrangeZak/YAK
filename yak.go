@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"yak/auth/PAM"
 
 	"libvirt.org/libvirt-go"
 )
@@ -30,6 +31,7 @@ func HTTPHandleFunc(writer http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	PAM.PAMAuth()
 	connection, err := libvirt.NewConnect("qemu:///system")
 	defer connection.Close() // NOTE(zak): Should we check err before we defer this. If defer doesnt check for null this could cause a crash
 	if err == nil {
