@@ -7,7 +7,7 @@ import (
 	"github.com/msteinert/pam"
 )
 
-func PAMAuth(username string, password string) {
+func PAMAuth(username string, password string) error {
 	t, err := pam.StartFunc("check_user", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff:
@@ -18,9 +18,11 @@ func PAMAuth(username string, password string) {
 		return "", errors.New("Unrecognized PAM message style")
 	})
 
-	if err != nil {
-		t.Authenticate(0)
+	if err == nil {
+		err = t.Authenticate(0)
 	} else {
-		log.Fatal("Authentication failed")
+		log.Fatal(err)
 	}
+
+	return err
 }
