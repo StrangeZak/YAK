@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 	pam "yak/auth/PAM"
 
 	"github.com/gorilla/securecookie"
@@ -13,16 +14,42 @@ import (
 var domains []libvirt.Domain
 
 const indexLoginPage = `
-<h1>Login</h1>
-<form method="post" action="/login">
-    <label for="name">User name</label>
-    <input type="text" id="name" name="name">
-	<br>
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password">
-	<br><br>
-    <button type="submit">Login</button>
-</form>
+<!DOCTYPE html>
+<head>
+	<title> YAK </title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
+</head>
+<body>
+	<section class="section">
+		<div class="container is-max-desktop">
+			<div class="columns is-centered">
+				<h1 class="title">YAK</h1>
+				<figure class="image">
+					<img src="images/yak.png">
+				</figure>
+			</div>
+			<form class="box" method="post" action="/login">
+				<div class="field">
+					<label for="name">Username</label>
+					<div class="control">
+      					<input class="input" type="text" id="name" name="name" placeholder="e.g. jack">
+    				</div>
+				</div>
+
+				<div class="field">
+					<label for="password">Password</label>
+					<div class="control">
+      					<input class="input" type="password" id="password" name="password" placeholder="**********">
+    				</div>
+				</div>
+				
+				<input class="button is-primary" button type="submit" value="Login">
+			</form>
+		</div>
+	</section>
+</body>
 `
 
 var cookieHandler = securecookie.New(
@@ -114,18 +141,23 @@ func main() {
 	connection, err := libvirt.NewConnect("qemu:///system")
 	defer connection.Close() // NOTE(zak): Should we check err before we defer this. If defer doesnt check for null this could cause a crash
 	if err == nil {
-		domains, err = connection.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
+		fmt.Printf("Listening for connection on port 8082...\n")
+
+		http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("./data/images"))))
+		http.HandleFunc("/", indexHandleFunc)
+		http.HandleFunc("/login", loginHandleFunc)
+		http.HandleFunc("/logout", logoutHandleFunc)
+
+		go func() {
+			err = http.ListenAndServe(":8082", nil)
+		}()
+
+		for {
+			domains, err = connection.ListAllDomains(0)
+			time.Sleep(1 * time.Second)
+		}
 	} else {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Listening for connection on port 8082...\n")
-
-	http.HandleFunc("/", indexHandleFunc)
-	http.HandleFunc("/login", loginHandleFunc)
-	http.HandleFunc("/logout", logoutHandleFunc)
-
-	if err := http.ListenAndServe(":8082", nil); err != nil {
-		log.Fatal(err)
-	}
 }

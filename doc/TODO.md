@@ -1,1 +1,2 @@
 - Create a proper PAM config for YAK
+- Create our own C PAM wrapper. Should be less than 100 lines of code
